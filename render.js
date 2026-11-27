@@ -84,10 +84,11 @@ export const PRODUCTS = {
 
 // ---------- anatomy (canonical) ----------
 // Nostril piercing site sits on the ala between landmarks 48 and 166 (right side).
-export function nostrilGeom(side, upMm = 0, frontMm = 0) {
-  // Piercing site: centre of the alar bulge, a little forward of its widest point
-  // (blend of 48 / 166 / 79 on the right side), ~5 mm above the nostril rim.
-  const ids = [48, 166, 79].map((i) => sideIdx(i, side)), w = [0.35, 0.4, 0.25];
+export function nostrilGeom(side, upMm = 0, frontMm = 0, kind = 'pin') {
+  // Nose-pin site: top-front of the alar bulge, just under the alar crease (calibrated on a
+  // reference photo of a real nostril piercing). Defined on the subject's LEFT (440 / 344 / 363).
+  const idsL = [440, 344, 363], w = [0.55, 0.25, 0.2];
+  const ids = side === 'L' ? idsL : idsL.map((i) => MIRROR[i]);
   const i75 = sideIdx(75, side), i98 = sideIdx(98, side);
   let P0 = [0, 0, 0], nn = [0, 0, 0];
   ids.forEach((i, k) => { P0 = add(P0, mul(CANON[i], w[k])); nn = add(nn, mul(NORMALS[i], w[k])); });
@@ -96,10 +97,14 @@ export function nostrilGeom(side, upMm = 0, frontMm = 0) {
   const RP = sub(R, P0);
   const t = norm(sub(RP, mul(n, dot(RP, n))));          // along the ala, down toward the rim
   let f = norm(cross(n, t)); if (f[2] < 0) f = mul(f, -1); // forward, toward the nose tip
-  const up = upMm / 10, fr = frontMm / 10;
+  let rim = dot(RP, t);
+  // Hoops are pierced lower than studs: about 5 mm above the rim so the ring can wrap it.
+  const drop = kind === 'ring' ? Math.max(0, rim - 0.5) : 0;
+  const up = upMm / 10 - drop, fr = frontMm / 10;
   const P = add(add(P0, mul(t, -up)), mul(f, fr));
+  rim = Math.max(0.15, rim + up);
   return {
-    side, P, n, t, f, rim: Math.max(0.15, dot(RP, t) + up),
+    side, P, n, t, f, rim,
     anchor: { idx: ids, w, c: P0 },
     ear: sideIdx(127, side), cheekN: NORMALS[sideIdx(234, side)],
   };
@@ -238,7 +243,7 @@ export function drawPin(ctx, F, G, prod, scale) {
   const lift = prod.type === 'ball' || prod.type === 'pearl' ? r * 0.85 : r * 0.35;
   const center = add(G.P, mul(G.n, lift));
   // anchor is a blend of mesh vertices (a chord, slightly under the skin) → allow extra depth slack
-  const vis = F.occ(F.map(center, G.anchor), 0.2) * ss(-0.2, 0.15, F.facing(G.n));
+  const vis = F.occ(F.map(center, G.anchor), 0.12) * ss(-0.02, 0.22, F.facing(G.n));
   if (vis < 0.02) return;
   ctx.save(); ctx.globalAlpha = vis;
   if (!F.thumb) contactShadow(ctx, F, G, r, prod.type === 'flower' ? 0.42 : 0.34);
@@ -337,6 +342,8 @@ export function drawRing(ctx, F, G, prod, scale) {
   const r = (prod.d / 2) * scale, g = prod.g * Math.sqrt(scale);
   // The hoop hangs from the hole and rests on the nostril rim: tilt its centre inward until
   // the circle passes through the rim point, so the outer arc hugs the ala like a real hoop.
+  // Real hoops rarely hang square to the skin: rotate the ring plane ~45° toward the tip.
+  if (!F.thumb && G.f) G = { ...G, n: norm(add(mul(G.n, 0.72), mul(G.f, 0.7))) };
   const ca = Math.min(1, G.rim / (2 * r)), sa = Math.sqrt(1 - ca * ca);
   const C = add(G.P, mul(add(mul(G.t, ca), mul(G.n, -sa)), r));
   const a = norm(sub(G.P, C));
@@ -353,7 +360,7 @@ export function drawRing(ctx, F, G, prod, scale) {
     let vis = 1;
     if (!F.thumb) {
       // visible from the hole, round the outside and under the rim; hidden once it re-enters the nostril
-      const inside = ss(thR - 0.05, thR + 0.12, th);
+      const inside = ss(thR + 0.15, thR + 0.45, th);
       vis = (1 - inside) * F.occ(F.map(X, G.anchor), 0.08) * fade;
     }
     pts.push({ p: F.map(X, G.anchor), rad: norm(add(rad, mul(G.n, 0.4))), vis, th });

@@ -192,14 +192,14 @@ function drawLook(F) {
   if (ring) {
     for (const side of sidesOf(state.ring.side)) {
       const shared = pinSides.includes(side);
-      const G = nostrilGeom(side, state.ring.up - (shared ? 1.4 : 0), state.ring.front - (shared ? 1.6 : 0));
+      const G = nostrilGeom(side, state.ring.up - (shared ? 0.6 : 0), state.ring.front - (shared ? 1.2 : 0), 'ring');
       drawRing(ctx, F, G, ring, state.ring.size);
     }
   }
   if (pin) {
     for (const side of pinSides) {
       const shared = ring && sidesOf(state.ring.side).includes(side);
-      const G = nostrilGeom(side, state.pin.up + (shared ? 0.9 : 0), state.pin.front + (shared ? 0.9 : 0));
+      const G = nostrilGeom(side, state.pin.up, state.pin.front);
       drawPin(ctx, F, G, pin, state.pin.size);
     }
   }
