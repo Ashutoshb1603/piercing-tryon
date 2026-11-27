@@ -306,6 +306,7 @@ function loop() {
   for (let i = 0; i < lm.length && i < 478; i++) { raw[i * 3] = lm[i].x * W; raw[i * 3 + 1] = lm[i].y * H; raw[i * 3 + 2] = lm[i].z * W; }
   const flat = mode === 'camera' ? euro.filter(raw, now / 1000) : raw;
   const F = buildFrame(flat, W, H, now);
+  if (QS.has('test')) window.__F = F;
   if (frameNo++ % 6 === 0) sampleLight(source, F);
   updateView(F);
   if (!state.compare) drawLook(F);
